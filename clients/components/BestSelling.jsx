@@ -8,11 +8,23 @@ const BestSelling = () => {
     const displayQuantity = 8
     const products = useSelector(state => state.product.list)
 
+    // Safe layout + safe rating sort
+    const sortedProducts = products.slice().sort((a, b) => {
+        const ratingA = a?.rating?.length || 0
+        const ratingB = b?.rating?.length || 0
+        return ratingB - ratingA
+    })
+
     return (
         <div className='px-6 my-30 max-w-6xl mx-auto'>
-            <Title title='Best Selling' description={`Showing ${products.length < displayQuantity ? products.length : displayQuantity} of ${products.length} products`} href='/shop' />
-            <div className='mt-12  grid grid-cols-2 sm:flex flex-wrap gap-6 xl:gap-12'>
-                {products.slice().sort((a, b) => b.rating.length - a.rating.length).slice(0, displayQuantity).map((product, index) => (
+            <Title
+                title='Best Selling'
+                description={`Showing ${products.length < displayQuantity ? products.length : displayQuantity} of ${products.length} products`}
+                href='/shop'
+            />
+
+            <div className='mt-12 grid grid-cols-2 sm:flex flex-wrap gap-6 xl:gap-12'>
+                {sortedProducts.slice(0, displayQuantity).map((product, index) => (
                     <ProductCard key={index} product={product} />
                 ))}
             </div>

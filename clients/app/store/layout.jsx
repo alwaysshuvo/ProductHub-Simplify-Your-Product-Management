@@ -5,8 +5,7 @@ export const metadata = {
     description: "ProductHub. - Store Dashboard",
 };
 
-export default function RootAdminLayout({ children }) {
-
+export default function StoreRootLayout({ children }) {
     return (
         <>
             <StoreLayout>

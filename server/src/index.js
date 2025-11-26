@@ -6,11 +6,10 @@ import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
 dotenv.config();
 const app = express();
 
-// ====== MIDDLEWARE ======
 app.use(cors());
 app.use(express.json());
 
-// ====== DATABASE CONNECTION ======
+
 
 const uri = process.env.MONGO_URI;
 let db, Users, Products, Stores, Ratings, Categories;
@@ -27,13 +26,11 @@ async function connectDB() {
   try {
     await client.connect();
     db = client.db("Producthub");
-
     Users = db.collection("users");
     Products = db.collection("products");
     Stores = db.collection("stores");
     Ratings = db.collection("ratings");
     Categories = db.collection("categories");
-
     console.log("MongoDB Connected Successfully");
   } catch (error) {
     console.error("DB Connection Error:", error.message);
@@ -41,131 +38,124 @@ async function connectDB() {
 }
 connectDB();
 
-// =================================================
-//                    ROUTES
-// =================================================
 
-// ===== TEST ROUTE =====
 app.get("/", (req, res) => {
   res.send("ProductHub Server is Running");
 });
 
-// =================================================
-//                PRODUCTS CRUD
-// =================================================
+//  PRODUCTS 
 
-// Get all products
+// All products
 app.get("/products", async (req, res) => {
   try {
-    const result = await Products.find().toArray();
-    res.send(result);
+    res.send(await Products.find().toArray());
   } catch {
     res.status(500).send({ error: "Failed to fetch products" });
   }
 });
 
-// Get Single Product
+// Single product
 app.get("/products/:id", async (req, res) => {
   try {
-    const result = await Products.findOne({ _id: new ObjectId(req.params.id) });
-    res.send(result);
+    res.send(await Products.findOne({ _id: new ObjectId(req.params.id) }));
   } catch {
     res.status(400).send({ error: "Invalid product ID" });
   }
 });
 
-// Create Product
+// Product create
 app.post("/products", async (req, res) => {
   try {
-    const result = await Products.insertOne(req.body);
+    const result = await Products.insertOne({ ...req.body, inStock: true });
     res.send(result);
   } catch {
     res.status(500).send({ error: "Failed to add product" });
   }
 });
 
-// Update Product
+// Product update
 app.put("/products/:id", async (req, res) => {
   try {
-    const result = await Products.updateOne(
-      { _id: new ObjectId(req.params.id) },
-      { $set: req.body }
+    res.send(
+      await Products.updateOne(
+        { _id: new ObjectId(req.params.id) },
+        { $set: req.body }
+      )
     );
-    res.send(result);
   } catch {
     res.status(500).send({ error: "Failed to update product" });
   }
 });
 
-// Delete Product
+// Product delete
 app.delete("/products/:id", async (req, res) => {
   try {
-    const result = await Products.deleteOne({
-      _id: new ObjectId(req.params.id),
-    });
-    res.send(result);
+    res.send(await Products.deleteOne({ _id: new ObjectId(req.params.id) }));
   } catch {
     res.status(500).send({ error: "Failed to delete product" });
   }
 });
 
-// =================================================
-//                STORES CRUD
-// =================================================
+//EXTRA ROUTES 
 
-// Get all stores
-app.get("/stores", async (req, res) => {
+// Products of a specific user
+app.get("/products/user/:uid", async (req, res) => {
   try {
-    const result = await Stores.find().toArray();
-    res.send(result);
+    res.send(await Products.find({ userId: req.params.uid }).toArray());
   } catch {
-    res.status(500).send({ error: "Failed to fetch stores" });
+    res.status(500).send({ error: "Failed to fetch user products" });
   }
 });
 
-// =================================================
-//                 USERS
-// =================================================
+// Toggle product stock
+app.patch("/products/toggle/:id", async (req, res) => {
+  try {
+    const product = await Products.findOne({ _id: new ObjectId(req.params.id) });
+    const updated = await Products.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { inStock: !product.inStock } }
+    );
+    res.send(updated);
+  } catch {
+    res.status(500).send({ error: "Failed to toggle stock" });
+  }
+});
 
-// Add User
+// =USERS
+
+// Add user
 app.post("/users", async (req, res) => {
   try {
-    const result = await Users.insertOne(req.body);
-    res.send(result);
+    res.send(await Users.insertOne(req.body));
   } catch {
     res.status(500).send({ error: "Failed to save user" });
   }
 });
 
-// Get Users
+// All users
 app.get("/users", async (req, res) => {
   try {
-    const result = await Users.find().toArray();
-    res.send(result);
+    res.send(await Users.find().toArray());
   } catch {
     res.status(500).send({ error: "Failed to fetch users" });
   }
 });
 
-// =================================================
-//                 RATINGS / REVIEWS
-// =================================================
+// RATINGS
 
-// Get all ratings
+// All ratings
 app.get("/ratings", async (req, res) => {
   try {
-    const result = await Ratings.find().toArray();
-    res.send(result);
+    res.send(await Ratings.find().toArray());
   } catch {
     res.status(500).send({ error: "Failed to fetch ratings" });
   }
 });
 
-// Get ratings by product
+// Ratings of specific product
 app.get("/ratings/product/:id", async (req, res) => {
   try {
-    const result = await Ratings.find({ productId: req.params.id }).toArray();
-    res.send(result);
+    res.send(await Ratings.find({ productId: req.params.id }).toArray());
   } catch {
     res.status(500).send({ error: "Failed to fetch product reviews" });
   }
@@ -174,63 +164,56 @@ app.get("/ratings/product/:id", async (req, res) => {
 // Add rating
 app.post("/ratings", async (req, res) => {
   try {
-    const result = await Ratings.insertOne(req.body);
-    res.send(result);
+    res.send(await Ratings.insertOne(req.body));
   } catch {
     res.status(500).send({ error: "Failed to save rating" });
   }
 });
 
-// =================================================
-//                 CATEGORIES CRUD
-// =================================================
+//CATEGORIES
 
-// Get all categories
+// All categories
 app.get("/categories", async (req, res) => {
   try {
-    const result = await Categories.find().toArray();
-    res.send(result);
+    res.send(await Categories.find().toArray());
   } catch {
     res.status(500).send({ error: "Failed to fetch categories" });
   }
 });
 
-// Add Category
+// Add category
 app.post("/categories", async (req, res) => {
   try {
-    const result = await Categories.insertOne(req.body);
-    res.send(result);
+    res.send(await Categories.insertOne(req.body));
   } catch {
     res.status(500).send({ error: "Failed to add category" });
   }
 });
 
-// Update Category
+// Update category
 app.put("/categories/:id", async (req, res) => {
   try {
-    const result = await Categories.updateOne(
-      { _id: new ObjectId(req.params.id) },
-      { $set: req.body }
+    res.send(
+      await Categories.updateOne(
+        { _id: new ObjectId(req.params.id) },
+        { $set: req.body }
+      )
     );
-    res.send(result);
   } catch {
     res.status(500).send({ error: "Failed to update category" });
   }
 });
 
-// Delete Category
+// Delete category
 app.delete("/categories/:id", async (req, res) => {
   try {
-    const result = await Categories.deleteOne({ _id: new ObjectId(req.params.id) });
-    res.send(result);
+    res.send(await Categories.deleteOne({ _id: new ObjectId(req.params.id) }));
   } catch {
     res.status(500).send({ error: "Failed to delete category" });
   }
 });
 
-// =================================================
-//               SERVER START
-// =================================================
-
+// Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log("Server running on port " + PORT));
+

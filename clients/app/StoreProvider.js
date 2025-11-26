@@ -1,29 +1,27 @@
 "use client";
-import { useRef, useEffect } from "react";
-import { Provider, useDispatch } from "react-redux";
-import { makeStore } from "../lib/store";
-import { fetchProducts } from "@/lib/features/product/productSlice";  // 🔥 IMPORT
+import { Provider } from "react-redux";
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { fetchProducts } from "@/lib/features/product/productSlice";
+import { makeStore } from "@/lib/store"; // 👈 Correct import
 
-// 🔥 First Time Data Load
+// ===================== Load Initial Data =====================
 function InitialDataFetcher({ children }) {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    dispatch(fetchProducts()); // Backend থেকে Product Load
-  }, []);
+    dispatch(fetchProducts());
+  }, [dispatch]);
 
   return children;
 }
 
+// ===================== Export Provider =====================
 export default function StoreProvider({ children }) {
-  const storeRef = useRef(null);
-
-  if (!storeRef.current) {
-    storeRef.current = makeStore();
-  }
+  const store = makeStore(); // 👈 Generate Redux Store
 
   return (
-    <Provider store={storeRef.current}>
+    <Provider store={store}>
       <InitialDataFetcher>{children}</InitialDataFetcher>
     </Provider>
   );

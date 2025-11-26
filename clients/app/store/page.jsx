@@ -1,5 +1,4 @@
 'use client'
-import { dummyStoreDashboardData } from "@/assets/assets"
 import Loading from "@/components/Loading"
 import { CircleDollarSignIcon, ShoppingBasketIcon, StarIcon, TagsIcon } from "lucide-react"
 import Image from "next/image"
@@ -9,7 +8,7 @@ import { useEffect, useState } from "react"
 export default function Dashboard() {
 
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
-
+    const API = process.env.NEXT_PUBLIC_API_URL
     const router = useRouter()
 
     const [loading, setLoading] = useState(true)
@@ -28,8 +27,15 @@ export default function Dashboard() {
     ]
 
     const fetchDashboardData = async () => {
-        setDashboardData(dummyStoreDashboardData)
-        setLoading(false)
+        try {
+            const res = await fetch(`${API}/store-dashboard`)
+            const data = await res.json()
+            setDashboardData(data)
+        } catch (error) {
+            console.log(error)
+        } finally {
+            setLoading(false)
+        }
     }
 
     useEffect(() => {

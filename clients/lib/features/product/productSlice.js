@@ -1,21 +1,33 @@
-import { createSlice } from '@reduxjs/toolkit'
-import { productDummyData } from '@/assets/assets'
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+
+// ===== Backend থেকে Products Load =====
+export const fetchProducts = createAsyncThunk("products/fetch", async () => {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`);
+  return await res.json();
+});
 
 const productSlice = createSlice({
   name: "product",
-    initialState: {
-        list: productDummyData,
+  initialState: {
+    list: [],
+    loading: false,
+  },
+  reducers: {
+    clearProduct: (state) => {
+      state.list = [];
     },
-    reducers: {
-        setProduct: (state, action) => {
-            state.list = action.payload
-        },
-        clearProduct: (state) => {
-            state.list = []
-        }
-    }
-})
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchProducts.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchProducts.fulfilled, (state, action) => {
+        state.loading = false;
+        state.list = action.payload;
+      });
+  },
+});
 
-export const { setProduct, clearProduct } = productSlice.actions
-
-export default productSlice.reducer
+export const { clearProduct } = productSlice.actions;
+export default productSlice.reducer;

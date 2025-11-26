@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Mail, Lock, LogIn, Chrome } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, LogIn, } from "lucide-react";
+import { FaGoogle } from "react-icons/fa";
 import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import toast from "react-hot-toast";
@@ -150,7 +151,7 @@ export default function LoginPage() {
             onClick={handleGoogleLogin}
             className="w-full flex items-center justify-center gap-2 border border-gray-300 hover:bg-gray-100 py-2.5 rounded-lg transition"
           >
-            <Chrome size={20} />
+            <FaGoogle size={20} />
             {loading ? "Signing in..." : "Continue with Google"}
           </button>
 

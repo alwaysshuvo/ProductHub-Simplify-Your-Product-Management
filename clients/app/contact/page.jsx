@@ -1,4 +1,14 @@
+"use client";
+import toast from "react-hot-toast";
+
 export default function ContactPage() {
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    toast.success("📨 Message sent successfully!");
+    // চাইলে backend API এও পাঠাতে পারো
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <section className="py-20 bg-gradient-to-r from-purple-100 via-white to-green-100">
@@ -34,11 +44,13 @@ export default function ContactPage() {
 
           {/* Contact Form */}
           <div className="p-6 bg-gray-50 rounded-xl shadow-sm border">
-            <form className="space-y-5">
-              <input className="w-full border p-3 rounded-lg" placeholder="Your Name" />
-              <input className="w-full border p-3 rounded-lg" placeholder="Email Address" />
-              <textarea rows="4" className="w-full border p-3 rounded-lg" placeholder="Your Message"></textarea>
-              <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              <input className="w-full border p-3 rounded-lg" placeholder="Your Name" required />
+              <input className="w-full border p-3 rounded-lg" placeholder="Email Address" required />
+              <textarea rows="4" className="w-full border p-3 rounded-lg" placeholder="Your Message" required></textarea>
+              <button
+                type="submit"
+                className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
                 Send Message
               </button>
             </form>

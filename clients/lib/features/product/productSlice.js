@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit'
 import { productDummyData } from '@/assets/assets'
 
 const productSlice = createSlice({
-    name: 'product',
+  name: "product",
     initialState: {
         list: productDummyData,
     },

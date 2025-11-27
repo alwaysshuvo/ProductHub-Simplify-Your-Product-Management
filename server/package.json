@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Express + MongoDB backend for ProductHub",
   "type": "module",
+  "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js"

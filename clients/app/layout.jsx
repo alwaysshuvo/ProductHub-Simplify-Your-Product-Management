@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import "./globals.css";
 import StoreProvider from "./StoreProvider";
 import Footer from "@/components/Footer";
+import { Toaster } from "react-hot-toast";
 
 export default function RootLayout({ children }) {
   return (
@@ -11,7 +12,8 @@ export default function RootLayout({ children }) {
           <Navbar />
           {children}
           <Footer />
-          </StoreProvider>
+          <Toaster position="top-center" reverseOrder={false} />
+        </StoreProvider>
       </body>
     </html>
   );

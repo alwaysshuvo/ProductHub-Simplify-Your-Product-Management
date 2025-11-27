@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { auth } from "@/lib/firebase";
 
 const StoreSidebar = ({ storeInfo }) => {
   const pathname = usePathname();
@@ -20,16 +21,15 @@ const StoreSidebar = ({ storeInfo }) => {
       href: "/store/manage-product",
       icon: SquarePenIcon,
     },
-    
   ];
 
   return (
     <div className="inline-flex h-full flex-col gap-5 border-r border-slate-200 sm:min-w-60">
       <div className="flex flex-col gap-3 justify-center items-center pt-8 max-sm:hidden">
         <Image
-          className="w-14 h-14 rounded-full shadow-md"
-          src={storeInfo?.logo || "/default-store.png"} 
-          alt="Store Logo"
+          className="w-14 h-14 rounded-full shadow-md object-cover"
+          src={auth.currentUser?.photoURL || "https://i.ibb.co/LdNdKtJz/User-Icon-Vector-Illustration-In-Glyph-Style-For-Any-Purpose-PNG-Images-Icon-Illustration-Template-P.jpg"}
+          alt="User"
           width={80}
           height={80}
         />

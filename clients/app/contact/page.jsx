@@ -6,7 +6,7 @@ export default function ContactPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     toast.success("📨 Message sent successfully!");
-    // চাইলে backend API এও পাঠাতে পারো
+
   };
 
   return (

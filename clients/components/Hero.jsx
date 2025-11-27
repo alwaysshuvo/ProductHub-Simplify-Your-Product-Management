@@ -8,11 +8,10 @@ const Hero = () => {
 
   const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
 
-  // static images for now (backend or DB images later)
   const heroImages = {
-    model: "https://i.ibb.co.com/6JckNXGn/hero-model-img.png",
-    product1: "https://i.ibb.co.com/TD1ZWzR2/hero-product-img1.png",
-    product2: "https://i.ibb.co.com/ksDj9Ntg/hero-product-img2.png",
+    model: "https://i.ibb.co/6JckNXGn/hero-model-img.png",
+    product1: "https://i.ibb.co/TD1ZWzR2/hero-product-img1.png",
+    product2: "https://i.ibb.co/ksDj9Ntg/hero-product-img2.png",
   };
 
   return (

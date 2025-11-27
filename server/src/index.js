@@ -9,17 +9,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
-
 const uri = process.env.MONGO_URI;
 let db, Users, Products, Stores, Ratings, Categories;
 
 const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  },
+  serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true },
 });
 
 async function connectDB() {
@@ -38,15 +32,15 @@ async function connectDB() {
 }
 connectDB();
 
+// ROOT CHECK
+app.get("/", (req, res) => res.send("ProductHub Server is Running"));
 
-app.get("/", (req, res) => {
-  res.send("ProductHub Server is Running");
-});
-
-//  PRODUCTS 
+/* ===========================
+          PRODUCTS 
+=========================== */
 
 // All products
-app.get("/products", async (req, res) => {
+app.get("/products", async (_, res) => {
   try {
     res.send(await Products.find().toArray());
   } catch {
@@ -63,7 +57,7 @@ app.get("/products/:id", async (req, res) => {
   }
 });
 
-// Product create
+// Create product
 app.post("/products", async (req, res) => {
   try {
     const result = await Products.insertOne({ ...req.body, inStock: true });
@@ -73,21 +67,19 @@ app.post("/products", async (req, res) => {
   }
 });
 
-// Product update
+// Update product
 app.put("/products/:id", async (req, res) => {
   try {
-    res.send(
-      await Products.updateOne(
-        { _id: new ObjectId(req.params.id) },
-        { $set: req.body }
-      )
-    );
+    res.send(await Products.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: req.body }
+    ));
   } catch {
     res.status(500).send({ error: "Failed to update product" });
   }
 });
 
-// Product delete
+// Delete product
 app.delete("/products/:id", async (req, res) => {
   try {
     res.send(await Products.deleteOne({ _id: new ObjectId(req.params.id) }));
@@ -96,9 +88,7 @@ app.delete("/products/:id", async (req, res) => {
   }
 });
 
-//EXTRA ROUTES 
-
-// Products of a specific user
+// Products by user
 app.get("/products/user/:uid", async (req, res) => {
   try {
     res.send(await Products.find({ userId: req.params.uid }).toArray());
@@ -107,23 +97,23 @@ app.get("/products/user/:uid", async (req, res) => {
   }
 });
 
-// Toggle product stock
+// Toggle stock
 app.patch("/products/toggle/:id", async (req, res) => {
   try {
     const product = await Products.findOne({ _id: new ObjectId(req.params.id) });
-    const updated = await Products.updateOne(
+    res.send(await Products.updateOne(
       { _id: new ObjectId(req.params.id) },
       { $set: { inStock: !product.inStock } }
-    );
-    res.send(updated);
+    ));
   } catch {
     res.status(500).send({ error: "Failed to toggle stock" });
   }
 });
 
-// =USERS
+/* ===========================
+            USERS 
+=========================== */
 
-// Add user
 app.post("/users", async (req, res) => {
   try {
     res.send(await Users.insertOne(req.body));
@@ -132,8 +122,7 @@ app.post("/users", async (req, res) => {
   }
 });
 
-// All users
-app.get("/users", async (req, res) => {
+app.get("/users", async (_, res) => {
   try {
     res.send(await Users.find().toArray());
   } catch {
@@ -141,10 +130,11 @@ app.get("/users", async (req, res) => {
   }
 });
 
-// RATINGS
+/* ===========================
+           RATINGS 
+=========================== */
 
-// All ratings
-app.get("/ratings", async (req, res) => {
+app.get("/ratings", async (_, res) => {
   try {
     res.send(await Ratings.find().toArray());
   } catch {
@@ -152,16 +142,14 @@ app.get("/ratings", async (req, res) => {
   }
 });
 
-// Ratings of specific product
 app.get("/ratings/product/:id", async (req, res) => {
   try {
     res.send(await Ratings.find({ productId: req.params.id }).toArray());
   } catch {
-    res.status(500).send({ error: "Failed to fetch product reviews" });
+    res.status(500).send({ error: "Failed to fetch reviews" });
   }
 });
 
-// Add rating
 app.post("/ratings", async (req, res) => {
   try {
     res.send(await Ratings.insertOne(req.body));
@@ -170,10 +158,11 @@ app.post("/ratings", async (req, res) => {
   }
 });
 
-//CATEGORIES
+/* ===========================
+          CATEGORIES 
+=========================== */
 
-// All categories
-app.get("/categories", async (req, res) => {
+app.get("/categories", async (_, res) => {
   try {
     res.send(await Categories.find().toArray());
   } catch {
@@ -181,7 +170,6 @@ app.get("/categories", async (req, res) => {
   }
 });
 
-// Add category
 app.post("/categories", async (req, res) => {
   try {
     res.send(await Categories.insertOne(req.body));
@@ -190,21 +178,17 @@ app.post("/categories", async (req, res) => {
   }
 });
 
-// Update category
 app.put("/categories/:id", async (req, res) => {
   try {
-    res.send(
-      await Categories.updateOne(
-        { _id: new ObjectId(req.params.id) },
-        { $set: req.body }
-      )
-    );
+    res.send(await Categories.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: req.body }
+    ));
   } catch {
     res.status(500).send({ error: "Failed to update category" });
   }
 });
 
-// Delete category
 app.delete("/categories/:id", async (req, res) => {
   try {
     res.send(await Categories.deleteOne({ _id: new ObjectId(req.params.id) }));
@@ -213,7 +197,28 @@ app.delete("/categories/:id", async (req, res) => {
   }
 });
 
+/* ===========================
+       SELLER DASHBOARD API 
+=========================== */
+
+app.get("/store-dashboard/:uid", async (req, res) => {
+  try {
+    const uid = req.params.uid;
+
+    const totalProducts = await Products.countDocuments({ userId: uid });
+    const ratings = await Ratings.find({ sellerId: uid }).toArray();
+
+    res.send({
+      totalProducts,
+      totalOrders: 0,
+      totalEarnings: 0,
+      ratings,
+    });
+  } catch {
+    res.status(500).send({ error: "Failed to fetch dashboard info" });
+  }
+});
+
 // Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log("Server running on port " + PORT));
-

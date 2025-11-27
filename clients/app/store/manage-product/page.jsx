@@ -5,6 +5,7 @@ import Image from "next/image";
 import Loading from "@/components/Loading";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import Link from "next/link";
 
 export default function StoreManageProducts() {
   const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "$";
@@ -12,60 +13,66 @@ export default function StoreManageProducts() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [userId, setUserId] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ open: false, id: null });
 
-  // ===================== Logged In User Check =====================
+  // ===================== Authentication Check =====================
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "/login"; // redirect to login
-      } else {
-        setUserId(user.uid);
-      }
+    return onAuthStateChanged(auth, (user) => {
+      if (!user) window.location.href = "/login";
+      else setUserId(user.uid);
     });
-    return () => unsub();
   }, []);
 
   // ===================== Fetch Products =====================
   const fetchProducts = async () => {
     try {
       setLoading(true);
-
-      // only fetch products created by this user
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/products/user/${userId}`
       );
       const data = await res.json();
-
       setProducts(data);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load products!");
     } finally {
       setLoading(false);
     }
   };
 
-  // run fetch after userId confirmed
   useEffect(() => {
     if (userId) fetchProducts();
   }, [userId]);
 
   // ===================== Toggle Stock =====================
   const toggleStock = async (productId) => {
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/products/toggle/${productId}`,
-        { method: "PATCH" }
-      );
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/products/toggle/${productId}`,
+      { method: "PATCH" }
+    );
+    if (res.ok) {
+      toast.success("Stock status updated");
+      fetchProducts();
+    } else toast.error("Failed to update");
+  };
 
-      if (res.ok) {
-        toast.success("Product stock updated!");
-        fetchProducts(); // refresh list
-      } else {
-        toast.error("Error updating stock!");
-      }
-    } catch (error) {
-      toast.error("Server error!");
-    }
+  // ===================== Delete Product =====================
+  const confirmDelete = async () => {
+    const id = deleteModal.id;
+    if (!id) return;
+
+    toast.loading("Deleting...");
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/products/${id}`,
+      { method: "DELETE" }
+    );
+    toast.dismiss();
+
+    if (res.ok) {
+      toast.success("Product deleted");
+      fetchProducts();
+    } else toast.error("Delete failed!");
+
+    setDeleteModal({ open: false, id: null });
   };
 
   if (loading) return <Loading />;
@@ -84,64 +91,106 @@ export default function StoreManageProducts() {
           <thead className="bg-slate-50 text-gray-700 uppercase tracking-wider">
             <tr>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3 hidden md:table-cell">Description</th>
               <th className="px-4 py-3 hidden md:table-cell">MRP</th>
               <th className="px-4 py-3">Price</th>
-              <th className="px-4 py-3">Actions</th>
+              <th className="px-4 py-3 text-center">Actions</th>
             </tr>
           </thead>
 
           <tbody className="text-slate-700">
-            {products.map((product) => (
+            {products.map((p) => (
               <tr
-                key={product._id}
+                key={p._id}
                 className="border-t border-gray-200 hover:bg-gray-50"
               >
+                {/* ===================== Product Info + Details Link ===================== */}
                 <td className="px-4 py-3">
-                  <div className="flex gap-2 items-center">
+                  <Link href={`/product/${p._id}`} className="flex gap-2 items-center">
                     <Image
                       width={40}
                       height={40}
-                      className="p-1 shadow rounded cursor-pointer"
-                      src={product.images[0]}
+                      className="p-1 shadow rounded"
+                      src={p.images[0]}
                       alt=""
                     />
-                    {product.name}
-                  </div>
-                </td>
-
-                <td className="px-4 py-3 max-w-md text-slate-600 hidden md:table-cell truncate">
-                  {product.description}
+                    <span className="cursor-pointer hover:underline">{p.name}</span>
+                  </Link>
                 </td>
 
                 <td className="px-4 py-3 hidden md:table-cell">
-                  {currency} {product.mrp.toLocaleString()}
+                  {currency} {p.mrp.toLocaleString()}
                 </td>
 
                 <td className="px-4 py-3">
-                  {currency} {product.price.toLocaleString()}
+                  {currency} {p.price.toLocaleString()}
                 </td>
 
-                <td className="px-4 py-3 text-center">
-                  <label className="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">
+                {/* ===================== Action Buttons ===================== */}
+                <td className="px-4 py-3 flex gap-3 justify-center">
+
+                  {/* Edit Btn */}
+                  <Link
+                    href={`/store/edit-product/${p._id}`}
+                    className="px-3 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                  >
+                    Edit
+                  </Link>
+
+                  {/* Toggle Stock */}
+                  <label className="relative inline-flex items-center cursor-pointer text-gray-900">
                     <input
                       type="checkbox"
                       className="sr-only peer"
+                      checked={p.inStock}
                       onChange={() =>
-                        toast.promise(toggleStock(product._id), {
-                          loading: "Updating data...",
+                        toast.promise(toggleStock(p._id), {
+                          loading: "Updating...",
                         })
                       }
-                      checked={product.inStock}
                     />
-                    <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-green-600 transition-colors duration-200"></div>
-                    <span className="dot absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-4"></span>
+                    <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-green-600 transition-colors"></div>
+                    <span className="dot absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform peer-checked:translate-x-4"></span>
                   </label>
+
+                  {/* Delete Btn */}
+                  <button
+                    onClick={() => setDeleteModal({ open: true, id: p._id })}
+                    className="px-3 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+
+      {/* ===================== Delete Modal ===================== */}
+      {deleteModal.open && (
+        <div className="fixed bg-black/50 inset-0 flex justify-center items-center z-50">
+          <div className="bg-white p-5 rounded shadow-lg text-center">
+            <h3 className="text-lg font-medium mb-4 text-slate-700">
+              Are you sure you want to delete?
+            </h3>
+
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setDeleteModal({ open: false, id: null })}
+                className="px-4 py-1 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

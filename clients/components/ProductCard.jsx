@@ -8,7 +8,8 @@ const ProductCard = ({ product }) => {
 
   const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$'
 
-  // safe rating calculate
+  const fixUrl = (url) => url?.replace("ibb.co.com", "ibb.co");
+
   const avgRating = product?.rating?.length
     ? Math.round(product.rating.reduce((acc, curr) => acc + (curr.rating || 0), 0) / product.rating.length)
     : 0
@@ -20,7 +21,7 @@ const ProductCard = ({ product }) => {
           width={500}
           height={500}
           className="max-h-30 sm:max-h-40 w-auto group-hover:scale-115 transition duration-300"
-          src={product.images?.[0] || "/placeholder.webp"}
+          src={fixUrl(product.images?.[0]) || "/placeholder.webp"}
           alt={product.name}
         />
       </div>

@@ -1,158 +1,252 @@
-'use client'
-import { assets } from "@/assets/assets";
+"use client";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { assets } from "@/assets/assets";
 
 export default function StoreAddProduct() {
+  const categories = [
+    "Electronics",
+    "Clothing",
+    "Home & Kitchen",
+    "Beauty & Health",
+    "Toys & Games",
+    "Sports & Outdoors",
+    "Books & Media",
+    "Food & Drink",
+    "Hobbies & Crafts",
+    "Others",
+  ];
 
-    const categories = ['Electronics', 'Clothing', 'Home & Kitchen', 'Beauty & Health', 'Toys & Games', 'Sports & Outdoors', 'Books & Media', 'Food & Drink', 'Hobbies & Crafts', 'Others'];
+  // === Local States ===
+  const [images, setImages] = useState({ 1: null, 2: null, 3: null, 4: null });
+  const [preview, setPreview] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState(null);
 
-    // single product images
-    const [images, setImages] = useState({ 1: null, 2: null, 3: null, 4: null });
+  const [productInfo, setProductInfo] = useState({
+    name: "",
+    description: "",
+    mrp: "",
+    price: "",
+    category: "",
+  });
 
-    const [productInfo, setProductInfo] = useState({
-        name: "",
-        description: "",
-        mrp: 0,
-        price: 0,
-        category: "",
+  // === Protected Route ===
+  useEffect(() => {
+    return onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        toast.error("Login required!");
+        window.location.href = "/login";
+      } else {
+        setUserId(user.uid);
+      }
     });
+  }, []);
 
-    const [loading, setLoading] = useState(false);
-    const [userId, setUserId] = useState(null); // logged user uid store
+  // === Handle Input Change ===
+  const onChangeHandler = (e) => {
+    setProductInfo({ ...productInfo, [e.target.name]: e.target.value });
+  };
 
-    // check user login; redirect if not logged in
-    useEffect(() => {
-        const unsub = onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                window.location.href = "/login";
-            } else {
-                setUserId(user.uid);
-            }
-        });
-        return () => unsub();
-    }, []);
+  // === Preview Image Before Upload ===
+  const handleImagePreview = (file, key) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/"))
+      return toast.error("Only image files allowed!");
 
-    const onChangeHandler = (e) => {
-        setProductInfo({ ...productInfo, [e.target.name]: e.target.value });
-    };
+    setImages({ ...images, [key]: file });
+    setPreview({ ...preview, [key]: URL.createObjectURL(file) });
+  };
 
-    // upload image to imgbb
-    const uploadImageToImgbb = async (imgFile) => {
-        const formData = new FormData();
-        formData.append("image", imgFile);
+  // === Upload Single Image to Imgbb ===
+  const uploadImageToImgbb = async (file) => {
+    try {
+      const data = new FormData();
+      data.append("image", file);
 
-        const res = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API}`, {
-            method: "POST",
-            body: formData,
-        });
+      const res = await fetch(
+        `https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_KEY}`,
+        { method: "POST", body: data }
+      );
 
-        const data = await res.json();
-        return data?.data?.url; // img url return
-    };
+      const json = await res.json();
+      let url = json?.data?.url;
 
-    const onSubmitHandler = async (e) => {
-        e.preventDefault();
+      // Fix malformed hostname (rare bug of Imgbb)
+      if (url?.includes("i.ibb.co.com")) {
+        url = url.replace("i.ibb.co.com", "i.ibb.co");
+      }
 
-        try {
-            setLoading(true);
+      return url;
+    } catch {
+      toast.error("Image upload failed!");
+      return null;
+    }
+  };
 
-            // Convert selected images to uploaded URL array
-            let uploadedImages = [];
-            for (const key of Object.keys(images)) {
-                if (images[key]) {
-                    const link = await uploadImageToImgbb(images[key]);
-                    uploadedImages.push(link);
-                }
-            }
+  // === Submit Handler ===
+  const onSubmitHandler = async (e) => {
+    e.preventDefault();
+    if (!userId) return toast.error("Session expired! Login again.");
 
-            if (uploadedImages.length === 0) {
-                return toast.error("Upload at least 1 product image!");
-            }
+    try {
+      setLoading(true);
+      let uploadedImages = [];
 
-            // API call to save product
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ...productInfo,
-                    images: uploadedImages,
-                    userId,               // who created it
-                    rating: [],           // default blank review
-                    createdAt: new Date()
-                })
-            });
+      toast.loading("Uploading images...");
 
-            if (res.ok) {
-                toast.success("Product added successfully!");
-                // reset input fields
-                setProductInfo({ name: "", description: "", mrp: 0, price: 0, category: "" });
-                setImages({ 1: null, 2: null, 3: null, 4: null });
-            } else {
-                toast.error("Failed to add product!");
-            }
-
-        } catch (error) {
-            toast.error("Something went wrong!");
-        } finally {
-            setLoading(false);
+      for (const key of Object.keys(images)) {
+        if (images[key]) {
+          const url = await uploadImageToImgbb(images[key]);
+          if (url) uploadedImages.push(url);
         }
-    };
+      }
 
-    return (
-        <form onSubmit={onSubmitHandler} className="text-slate-500 mb-28">
-            <h1 className="text-2xl">Add New <span className="text-slate-800 font-medium">Products</span></h1>
-            <p className="mt-7">Product Images</p>
+      toast.dismiss();
 
-            {/* Image Inputs */}
-            <div className="flex gap-3 mt-4">
-                {Object.keys(images).map((key) => (
-                    <label key={key} htmlFor={`images${key}`}>
-                        <Image width={300} height={300} className="h-15 w-auto border border-slate-200 rounded cursor-pointer" src={images[key] ? URL.createObjectURL(images[key]) : assets.upload_area} alt="" />
-                        <input type="file" accept="image/*" id={`images${key}`} onChange={e => setImages({ ...images, [key]: e.target.files[0] })} hidden />
-                    </label>
-                ))}
-            </div>
+      if (uploadedImages.length === 0) {
+        setLoading(false);
+        return toast.error("Upload at least 1 product image!");
+      }
 
-            {/* Name */}
-            <label className="flex flex-col gap-2 my-6">
-                Name
-                <input type="text" name="name" onChange={onChangeHandler} value={productInfo.name} placeholder="Enter product name" className="w-full max-w-sm p-2 px-4 outline-none border border-slate-200 rounded" required />
-            </label>
+      toast.loading("Saving product...");
 
-            {/* Description */}
-            <label className="flex flex-col gap-2 my-6">
-                Description
-                <textarea name="description" onChange={onChangeHandler} value={productInfo.description} placeholder="Enter product description" rows={5} className="w-full max-w-sm p-2 px-4 outline-none border border-slate-200 rounded resize-none" required />
-            </label>
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...productInfo,
+          userId,
+          images: uploadedImages,
+          rating: [],
+          inStock: true,
+          createdAt: Date.now(),
+        }),
+      });
 
-            {/* Prices */}
-            <div className="flex gap-5">
-                <label className="flex flex-col gap-2">
-                    Actual Price ($)
-                    <input type="number" name="mrp" onChange={onChangeHandler} value={productInfo.mrp} placeholder="0" className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded" required />
-                </label>
-                <label className="flex flex-col gap-2">
-                    Offer Price ($)
-                    <input type="number" name="price" onChange={onChangeHandler} value={productInfo.price} placeholder="0" className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded" required />
-                </label>
-            </div>
+      toast.dismiss();
 
-            {/* Categories */}
-            <select onChange={e => setProductInfo({ ...productInfo, category: e.target.value })} value={productInfo.category} className="w-full max-w-sm p-2 px-4 my-6 outline-none border border-slate-200 rounded" required>
-                <option value="">Select a category</option>
-                {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                ))}
-            </select>
+      if (res.ok) {
+        toast.success("Product added successfully! 🎉");
 
-            {/* Submit */}
-            <button disabled={loading} className="bg-slate-800 text-white px-6 mt-7 py-2 hover:bg-slate-900 rounded transition">
-                {loading ? "Please wait..." : "Add Product"}
-            </button>
-        </form>
-    );
+        // Reset form
+        setProductInfo({ name: "", description: "", mrp: "", price: "", category: "" });
+        setImages({ 1: null, 2: null, 3: null, 4: null });
+        setPreview({});
+      } else {
+        toast.error("Failed to add product!");
+      }
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Something went wrong!");
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={onSubmitHandler} className="text-slate-500 mb-28">
+      <h1 className="text-2xl">
+        Add New <span className="text-slate-800 font-medium">Products</span>
+      </h1>
+      <p className="mt-7">Product Images</p>
+
+      {/* === Image Inputs === */}
+      <div className="flex gap-3 mt-4">
+        {Object.keys(images).map((key) => (
+          <label key={key} className="cursor-pointer">
+            <Image
+              width={160}
+              height={120}
+              className="h-20 sm:h-24 w-auto border border-slate-300 rounded hover:shadow-md transition"
+              src={preview[key] || assets.upload_area}
+              alt="upload"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => handleImagePreview(e.target.files[0], key)}
+            />
+          </label>
+        ))}
+      </div>
+
+      {/* === Inputs === */}
+      <label className="flex flex-col gap-2 my-6">
+        Name
+        <input
+          name="name"
+          value={productInfo.name}
+          onChange={onChangeHandler}
+          placeholder="Enter product name"
+          className="w-full max-w-sm p-2 px-4 border border-slate-200 rounded outline-none"
+          required
+        />
+      </label>
+
+      <label className="flex flex-col gap-2 my-6">
+        Description
+        <textarea
+          name="description"
+          value={productInfo.description}
+          onChange={onChangeHandler}
+          placeholder="Enter product description"
+          rows={5}
+          className="w-full max-w-sm p-2 px-4 border border-slate-200 rounded resize-none outline-none"
+          required
+        />
+      </label>
+
+      <div className="flex gap-5">
+        <label className="flex flex-col gap-2">
+          Actual Price ($)
+          <input
+            name="mrp"
+            type="number"
+            value={productInfo.mrp}
+            onChange={onChangeHandler}
+            className="w-full max-w-45 p-2 px-4 border border-slate-200 rounded outline-none"
+            required
+          />
+        </label>
+        <label className="flex flex-col gap-2">
+          Offer Price ($)
+          <input
+            name="price"
+            type="number"
+            value={productInfo.price}
+            onChange={onChangeHandler}
+            className="w-full max-w-45 p-2 px-4 border border-slate-200 rounded outline-none"
+            required
+          />
+        </label>
+      </div>
+
+      <select
+        value={productInfo.category}
+        onChange={(e) => setProductInfo({ ...productInfo, category: e.target.value })}
+        className="w-full max-w-sm p-2 px-4 my-6 border border-slate-200 rounded outline-none"
+        required
+      >
+        <option value="">Select a category</option>
+        {categories.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
+      </select>
+
+      <button
+        disabled={loading}
+        className="bg-slate-800 text-white px-6 mt-7 py-2 rounded transition hover:bg-slate-900 disabled:opacity-50"
+      >
+        {loading ? "Uploading..." : "Add Product"}
+      </button>
+    </form>
+  );
 }

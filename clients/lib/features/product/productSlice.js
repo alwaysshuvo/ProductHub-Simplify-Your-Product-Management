@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-// ===== Backend থেকে Products Load =====
+
 export const fetchProducts = createAsyncThunk("products/fetch", async () => {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`);
   return await res.json();
